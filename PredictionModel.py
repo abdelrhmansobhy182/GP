@@ -1,18 +1,15 @@
-import seaborn as sns
-import matplotlib.pyplot as plt
-from sklearn.linear_model import LogisticRegression
-from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn import linear_model
-import pandas as pd
 import math
+
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
+import sklearn.metrics as sm
+from sklearn import linear_model
+from sklearn import metrics
 from sklearn.feature_selection import SelectKBest
 from sklearn.feature_selection import chi2
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from sklearn import metrics
-from sklearn.metrics import classification_report, r2_score
-import sklearn.metrics as sm
 
 
 def merge(data, dataframe):
@@ -20,11 +17,11 @@ def merge(data, dataframe):
     return result
 
 
-modelNum = linear_model.LinearRegression()
+# modelNum = linear_model.LinearRegression()
 
 
 ###### all data
-def trainModel(data, dataframe, classification):
+def trainModel(data, dataframe, classification, model):
     data.dropna(inplace=True)
     X = data.drop(dataframe, axis=1)
     Y = data[dataframe]
@@ -32,36 +29,35 @@ def trainModel(data, dataframe, classification):
 
     feature = ""
     if classification is True:
-        model = LogisticRegression()
+        model1 = model
         feature = selectFeatureChi2(X, Y)
         X = data[feature]
 
         X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.4, random_state=100)
-        model.fit(X_train, y_train)
-
-
-
+        model1.fit(X_train, y_train)
     else:
+        model1 = model
         feature = selectFeatureCorr(data, dataframe)
         X = data[feature]
-        print(X)
+        # print(X)
         X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.4, random_state=100)
         # poly_features = PolynomialFeatures(degree=3)
         # X_train_poly = poly_features.fit_transform(X_train)
         # model = linear_model.LinearRegression()
         # model.fit(X_train_poly, y_train)
-        modelNum.fit(X_train, y_train)
+        model1.fit(X_train, y_train)
 
     if classification is True:
-        y_pred = model.predict(X_test)
-        # classificationAccuracy(y_test,y_pred)
-        return model, feature
+        y_pred = model1.predict(X_test)
+        classificationAccuracy(y_test, y_pred)
+        return model1, feature
     else:
-        # regressionAccuracy(y_test,y_pred)
-        print("Accuracy of training dataset:", modelNum.score(X_train, y_train))
-        print("Accuracy of test dataset:", modelNum.score(X_test, y_test))
+        y_pred = model1.predict(X_test)
+        regressionAccuracy(y_test, y_pred)
+        print("Accuracy of training dataset:", model1.score(X_train, y_train))
+        print("Accuracy of test dataset:", model1.score(X_test, y_test))
         # print('Coefficient of determination: %.2f' % r2_score(y_test, predict))
-        return modelNum, feature
+        return model1, feature
     # print(feature)
 
 
@@ -105,12 +101,21 @@ def selectFeatureCorr(data, Y):
     corr = data.corr()
     # print(data)
     # Top 50% Correlation training features with the Value
-    top_feature = corr.index[abs(corr[Y]) > 0.4]
+    threshold = 0.5
+
+    while (threshold >= 0.2):
+        top_feature = corr.index[abs(corr[Y]) > threshold]
+        print((top_feature.size))
+        if top_feature.size > 1:
+            break
+        else:
+            threshold = threshold - 0.1
+
     # Correlation plot
     plt.subplots(figsize=(12, 8))
     top_corr = data[top_feature].corr()
     sns.heatmap(top_corr, annot=True)
-    plt.show()
+    #plt.show()
     top_corr = data[top_feature].corr()
     top_feature = top_feature.delete(-1)
     # print(len(top_feature))
