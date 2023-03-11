@@ -1,6 +1,7 @@
 import math
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import seaborn as sns
 import sklearn.metrics as sm
@@ -10,6 +11,8 @@ from sklearn.feature_selection import SelectKBest
 from sklearn.feature_selection import chi2
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
+
 
 
 def merge(data, dataframe):
@@ -32,14 +35,12 @@ def trainModel(data, dataframe, classification, model):
         model1 = model
         feature = selectFeatureChi2(X, Y)
         X = data[feature]
-
         X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.4, random_state=100)
         model1.fit(X_train, y_train)
     else:
         model1 = model
         feature = selectFeatureCorr(data, dataframe)
         X = data[feature]
-        # print(X)
         X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.4, random_state=100)
         # poly_features = PolynomialFeatures(degree=3)
         # X_train_poly = poly_features.fit_transform(X_train)
@@ -54,8 +55,8 @@ def trainModel(data, dataframe, classification, model):
     else:
         y_pred = model1.predict(X_test)
         regressionAccuracy(y_test, y_pred)
-        print("Accuracy of training dataset:", model1.score(X_train, y_train))
-        print("Accuracy of test dataset:", model1.score(X_test, y_test))
+        # print("Accuracy of training dataset:", model1.score(X_train, y_train))
+        # print("Accuracy of test dataset:", model1.score(X_test, y_test))
         # print('Coefficient of determination: %.2f' % r2_score(y_test, predict))
         return model1, feature
     # print(feature)
@@ -67,7 +68,7 @@ def getTestData(data, dataframe):
     return TestData
 
 
-def predict(TestData, selected, model, data, dataframe):
+def predict(TestData, selected, model, data, dataframe ):
     # print(TestData)
     X_Test = TestData[selected]
     # print(X_Test)
@@ -112,7 +113,7 @@ def selectFeatureCorr(data, Y):
             threshold = threshold - 0.1
 
     # Correlation plot
-    plt.subplots(figsize=(12, 8))
+    #plt.subplots(figsize=(12, 8))
     top_corr = data[top_feature].corr()
     sns.heatmap(top_corr, annot=True)
     #plt.show()
@@ -144,3 +145,14 @@ def regressionAccuracy(y_test, y_pred):
     print("Median absolute error =", round(sm.median_absolute_error(y_test, y_pred), 2))
     print("Explain variance score =", round(sm.explained_variance_score(y_test, y_pred), 2))
     print("R2 score =", round(sm.r2_score(y_test, y_pred), 2))
+
+def featureScaling(X,a,b):
+    X = np.array(X)
+    minimum=[]
+    maximum=[]
+    Normalized_X=np.zeros((X.shape[0],X.shape[1]))
+    for i in range(X.shape[1]):
+        Normalized_X[:,i]=((X[:,i]-min(X[:,i]))/(max(X[:,i])-min(X[:,i])))*(b-a)+a
+        minimum.append(min(X[:,i]))
+        maximum.append(max(X[:, i]))
+    return Normalized_X,minimum,maximum
