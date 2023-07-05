@@ -1,32 +1,33 @@
+import matplotlib
 import pandas as pd
+import seaborn as sns
 from matplotlib import pyplot as plt
 from sklearn import linear_model
-from sklearn.feature_selection import SelectKBest
-from sklearn.feature_selection import chi2
 import numpy as np
-from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.preprocessing import LabelEncoder, MinMaxScaler, StandardScaler
-from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import LabelEncoder
 from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier, BaggingClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import RandomForestRegressor
-
+from sklearn.svm import SVC
 from sklearn import metrics
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.naive_bayes import GaussianNB
 
+import IncreaseData
 import encoding
 import PredictionModel
 
 # read data
 data = pd.read_csv('kidney_disease.csv')
-data.drop('id', axis=1, inplace=True)
+#data.drop('id', axis=1, inplace=True)
 data.columns = ['age', 'blood_pressure', 'specific_gravity', 'albumin', 'sugar', 'red_blood_cells', 'pus_cell',
                 'pus_cell_clumps', 'bacteria', 'blood_glucose_random', 'blood_urea', 'serum_creatinine', 'sodium',
                 'potassium', 'haemoglobin', 'packed_cell_volume', 'white_blood_cell_count', 'red_blood_cell_count',
                 'hypertension', 'diabetes_mellitus', 'coronary_artery_disease', 'appetite', 'peda_edema',
-                'aanemia', 'class']
+                    'aanemia', 'class']
 data['packed_cell_volume'] = pd.to_numeric(data['packed_cell_volume'], errors='coerce')
 data['white_blood_cell_count'] = pd.to_numeric(data['white_blood_cell_count'], errors='coerce')
 data['red_blood_cell_count'] = pd.to_numeric(data['red_blood_cell_count'], errors='coerce')
@@ -92,7 +93,6 @@ modelCat = LogisticRegression()
 
 for i in CategralTest:
     result = PredictionModel.merge(train_data, data[i])
-    result.to_csv("result.csv", index=False)
     TestData = PredictionModel.getTestData(result, i)
     modelCat, selected = PredictionModel.trainModel(result, i, True, modelCat)
     data = PredictionModel.predict(TestData, selected, modelCat, data, i)
@@ -104,62 +104,80 @@ for i in NumaricTest:
     data = PredictionModel.predict(TestData, selected, regressor, data, i)
     newData = pd.concat([train_data, data[i]], axis=1, join='inner')
     train_data = newData
-    # print(train_data)
-def prediction_plot(model,X_train, X_test, y_train, y_test):
-    y_pred = model.predict(X_test)
-    y_test = np.array(list(y_test))
-    y_pred = np.array(y_pred)
-    df_ans = pd.DataFrame({'Actual': y_test.flatten(), 'Predicted': y_pred.flatten()})
-    print(df_ans)
-    print("Accuracy:",metrics.accuracy_score(y_test, y_pred))
-    print('Mean Absolute Error:', metrics.mean_absolute_error(y_test, y_pred))
-    print('Mean Squared Error:', metrics.mean_squared_error(y_test, y_pred))
-    print('Root Mean Squared Error:', np.sqrt(metrics.mean_squared_error(y_test, y_pred)))
-    print(classification_report(y_test, y_pred))
-
-    # confusion matrix plot
-
-# confusion matrix plot
-def conf(y_test, y_pred):
-    cm = confusion_matrix(y_test, y_pred)
-
-    fig, ax = plt.subplots(figsize=(8, 8))
-    ax.imshow(cm)
-    ax.grid(False)
-    ax.set_xlabel('Predicted outputs', color='black')
-    ax.set_ylabel('Actual outputs',  color='black')
-    ax.xaxis.set(ticks=range(2))
-    ax.yaxis.set(ticks=range(2))
-    # ax.set_ylim(9.5, -0.5)
-    for i in range(2):
-        for j in range(2):
-            ax.text(j, i, cm[i, j], ha='center', va='center', color='white')
-    plt.show()
 
 
 data.to_csv("AllDetails.csv", index=False)
-X= data.iloc[:,:-1]
+# data = IncreaseData.increaseData(data)
+print(data)
+
 Y = data['class']
+X = data.loc[:, data.columns != 'class']
+#Feature Selection
+#Get the correlation between the features
+# corr = data.corr()
+# #Top 50% Correlation training features with the Value
+# top_feature = corr.index[abs(corr['class']) > 0.5]
+# #Correlation plot
+# plt.subplots(figsize=(12, 8))
+# top_corr = data[top_feature].corr()
+# sns.heatmap(top_corr, annot=True)
+# plt.show()
+# top_feature = top_feature.delete(-1)
+# X = X[top_feature]
+
+#print(top_feature)
+
 X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.20)
 
-# fit the model
-# #KNN
-# model = KNeighborsClassifier(n_neighbors=3)
-# model.fit(X_train, y_train)
-# y_pred = model.predict(X_test)
-# prediction_plot(model,X_train, X_test, y_train, y_test)
-# conf(y_test, y_pred)
+########################## Random Forest ##########################
+rf = RandomForestClassifier()
+rf.fit(X_train, y_train)
 
-# bagging classifier
-# ensemble learning with decision tree
-# no. of base classifier
-num_trees = 100
-base_cls = DecisionTreeClassifier()
-seed = 8
-model = BaggingClassifier(base_estimator = base_cls,
-                          n_estimators = num_trees,
-                          random_state = seed)
-history = model.fit(X_train, y_train)
-y_pred = model.predict(X_test)
-prediction_plot(model,X_train, X_test, y_train, y_test)
-conf(y_test, y_pred)
+# Top 10 Features
+feature_scores=pd.DataFrame(rf.feature_importances_,columns=['Score'],index=X_train.columns).sort_values(by='Score',ascending=False)
+top10_feature = feature_scores.nlargest(n=10, columns=['Score'])
+
+plt.figure(figsize=(8,14))
+font = {'family' : 'monospace',
+        'size'   : 8}
+
+matplotlib.rc('font', **font)
+g = sns.barplot(x=top10_feature.index, y=top10_feature['Score'])
+p = plt.title('Top 10 Features')
+p = plt.xlabel('Feature name')
+p = plt.ylabel('score')
+p = g.set_xticklabels(g.get_xticklabels(), horizontalalignment='right')
+plt.show()
+y_pred = rf.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+print("Random Forest Accuracy:", accuracy)
+########################## Logistic Regression ##########################
+reg = LogisticRegression()
+reg.fit(X_train, y_train)
+y_pred = reg.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+print("Logistic Regression Accuracy:", accuracy)
+########################## Decision Tree ##########################
+dtc = DecisionTreeClassifier()
+dtc.fit(X_train, y_train)
+y_pred = dtc.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+print("Decision Tree Accuracy:", accuracy)
+########################## Support Vector Machine ##########################
+svc = SVC()
+svc.fit(X_train, y_train)
+y_pred = svc.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+print("Support Vector Machine Accuracy:", accuracy)
+########################## KNeighbors ##########################
+knn = KNeighborsClassifier()
+knn.fit(X_train, y_train)
+y_pred = knn.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+print("KNeighbors Accuracy:", accuracy)
+########################## Naive Bayes ##########################
+gnb = GaussianNB()
+gnb.fit(X_train, y_train)
+y_pred = gnb.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+print("Naive Bayes Accuracy:", accuracy)

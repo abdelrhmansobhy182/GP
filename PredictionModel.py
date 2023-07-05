@@ -50,11 +50,11 @@ def trainModel(data, dataframe, classification, model):
 
     if classification is True:
         y_pred = model1.predict(X_test)
-        classificationAccuracy(y_test, y_pred)
+        #classificationAccuracy(y_test, y_pred)
         return model1, feature
     else:
         y_pred = model1.predict(X_test)
-        regressionAccuracy(y_test, y_pred)
+        #regressionAccuracy(y_test, y_pred)
         # print("Accuracy of training dataset:", model1.score(X_train, y_train))
         # print("Accuracy of test dataset:", model1.score(X_test, y_test))
         # print('Coefficient of determination: %.2f' % r2_score(y_test, predict))
